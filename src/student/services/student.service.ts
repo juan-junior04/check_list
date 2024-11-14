@@ -1,26 +1,49 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { CreateStudentDto } from '../dto/create-student.dto';
 import { UpdateStudentDto } from '../dto/update-student.dto';
+import { Student, StudentSchema } from '../schema/student.schema';
 
 @Injectable()
 export class StudentService {
-  create(createStudentDto: CreateStudentDto) {
-    return 'This action adds a new student';
+  constructor(
+    @InjectModel(Student.name) private studentModel: Model<Student>,
+  ) {}
+
+
+  async create(createStudentDto: CreateStudentDto): Promise<Student> {
+    const createdStudent = new this.studentModel(createStudentDto);
+    return createdStudent.save();
   }
 
-  findAll() {
-    return `This action returns all student`;
+  async findAll(): Promise<Student[]> {
+    return this.studentModel.find().exec();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} student`;
+  
+  async findOne(id: string): Promise<Student> {
+    const student = await this.studentModel.findById(id).exec();
+    if (!student) {
+      throw new NotFoundException(`Student with ID ${id} not found`);
+    }
+    return student;
   }
 
-  update(id: number, updateStudentDto: UpdateStudentDto) {
-    return `This action updates a #${id} student`;
+  
+  async update(id: string, updateStudentDto: UpdateStudentDto): Promise<Student> {
+    const student = await this.studentModel.findByIdAndUpdate(id, updateStudentDto, { new: true }).exec();
+    if (!student) {
+      throw new NotFoundException(`Student with ID ${id} not found`);
+    }
+    return student;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} student`;
+  
+  async remove(id: string): Promise<void> {
+    const result = await this.studentModel.deleteOne({ _id: id }).exec();
+    if (result.deletedCount === 0) {
+      throw new NotFoundException(`Student with ID ${id} not found`);
+    }
   }
 }
